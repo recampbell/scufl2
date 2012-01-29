@@ -1,6 +1,7 @@
 package uk.org.taverna.scufl2.api.iterationstrategy;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import uk.org.taverna.scufl2.api.common.Visitor;
@@ -12,6 +13,14 @@ import uk.org.taverna.scufl2.api.common.Visitor;
 public class CrossProduct extends ArrayList<IterationStrategyNode> implements
 		IterationStrategyTopNode {
 
+	public CrossProduct() {
+		super();
+	}
+	
+	public CrossProduct(IterationStrategyNode... nodes) {
+		super(Arrays.asList(nodes));
+	}
+	
 	private IterationStrategyParent parent;
 
 	@Override
