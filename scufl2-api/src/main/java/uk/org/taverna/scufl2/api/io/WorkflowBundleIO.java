@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
@@ -17,12 +18,14 @@ import uk.org.taverna.scufl2.api.container.WorkflowBundle;
 
 /**
  * Utility class for reading and writing <code>WorkflowBundle</code>s.
+ * 
+ * 
  */
 public class WorkflowBundleIO {
 
-	// delay initialising the ServiceLoaders
-	protected ServiceLoader<WorkflowBundleWriter> writersLoader;
-	protected ServiceLoader<WorkflowBundleReader> readersLoader;
+	// set to null, delay initialising the ServiceLoaders
+	protected ServiceLoader<WorkflowBundleWriter> writersLoader = null;
+	protected ServiceLoader<WorkflowBundleReader> readersLoader = null;
 
 	private List<WorkflowBundleWriter> writers;
 
@@ -46,7 +49,6 @@ public class WorkflowBundleIO {
 		}
 		return allReaders;
 	}
-
 	protected List<WorkflowBundleWriter> discoverWriters() {
 		synchronized (this) {
 			if (writersLoader == null) {
@@ -67,12 +69,12 @@ public class WorkflowBundleIO {
 	/**
 	 * Returns a <code>WorkflowBundleReader</code> for the specified media type.
 	 * 
-	 * If there is more than one <code>WorkflowBundleReader</code> for the specified media type the
-	 * first reader discovered is returned. Subsequent calls to this method may return a different
-	 * reader.
+	 * If there is more than one <code>WorkflowBundleReader</code> for the
+	 * specified media type the first reader discovered is returned. Subsequent
+	 * calls to this method may return a different reader.
 	 * 
-	 * If there is no <code>WorkflowBundleReader</code> for the specified media type
-	 * <code>null</code> is returned.
+	 * If there is no <code>WorkflowBundleReader</code> for the specified media
+	 * type <code>null</code> is returned.
 	 * 
 	 * @param mediaType
 	 *            the media type of the <code>WorkflowBundleReader</code>
@@ -85,6 +87,26 @@ public class WorkflowBundleIO {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Get the media types supported by the current {@link #getReaders()}. The
+	 * returned media types are supported with {@link #readBundle(File, String)}
+	 * , {@link #readBundle(InputStream, String)} or
+	 * {@link #readBundle(URL, String)}, but not necessarily all three.
+	 * <p>
+	 * Although the set returned might have a consistent order on multiple
+	 * calls, this order does not have any semantic meaning.
+	 * 
+	 * @return A {@link Set} of {@link String}s specifying the media types
+	 *         supported by <code>readBundle</code>
+	 */
+	public Set<String> getReaderMediaTypes() {
+		LinkedHashSet<String> types = new LinkedHashSet<String>();
+		for (WorkflowBundleReader reader : getReaders()) {
+			types.addAll(reader.getMediaTypes());
+		}
+		return types;
 	}
 
 	/**
@@ -102,12 +124,12 @@ public class WorkflowBundleIO {
 	/**
 	 * Returns a <code>WorkflowBundleWriter</code> for the specified media type.
 	 * 
-	 * If there is more than one <code>WorkflowBundleWriter</code> for the specified media type the
-	 * first writer discovered is returned. Subsequent calls to this method may return a different
-	 * writer.
+	 * If there is more than one <code>WorkflowBundleWriter</code> for the
+	 * specified media type the first writer discovered is returned. Subsequent
+	 * calls to this method may return a different writer.
 	 * 
-	 * If there is no <code>WorkflowBundleWriter</code> for the specified media type
-	 * <code>null</code> is returned.
+	 * If there is no <code>WorkflowBundleWriter</code> for the specified media
+	 * type <code>null</code> is returned.
 	 * 
 	 * @param mediaType
 	 *            the media type of the <code>WorkflowBundleWriter</code>
@@ -120,6 +142,27 @@ public class WorkflowBundleIO {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Get the media types supported by the current {@link #getWriters()}. The
+	 * returned media types are supported by
+	 * {@link #writeBundle(WorkflowBundle, File, String)} or
+	 * {@link #writeBundle(WorkflowBundle, OutputStream, String)}, but not
+	 * necessarily both.
+	 * <p>
+	 * Although the set returned might have a consistent order on multiple
+	 * calls, this order does not have any semantic meaning.
+	 * 
+	 * @return A {@link Set} of {@link String}s specifying the media types
+	 *         supported by <code>writeBundle</code>
+	 */
+	public Set<String> getWriterMediaTypes() {
+		LinkedHashSet<String> types = new LinkedHashSet<String>();
+		for (WorkflowBundleReader reader : getReaders()) {
+			types.addAll(reader.getMediaTypes());
+		}
+		return types;
 	}
 
 	/**
@@ -136,9 +179,9 @@ public class WorkflowBundleIO {
 
 	/**
 	 * Attempt to guess the media type for a stream or file that starts with
-	 * these bytes. 
+	 * these bytes.
 	 * <p>
-	 * All registered {@link #getReaders()} are consulted. 
+	 * All registered {@link #getReaders()} are consulted.
 	 * <p>
 	 * Return <code>null</code> if ambiguous (more than one possibility) or
 	 * unknown.
@@ -166,28 +209,29 @@ public class WorkflowBundleIO {
 		}
 		return mediaTypes.iterator().next();
 	}
-	
-	
+
 	/**
-	 * Reads a file containing a workflow bundle in the specified media type and returns a
-	 * <code>WorkflowBundle</code>.
+	 * Reads a file containing a workflow bundle in the specified media type and
+	 * returns a <code>WorkflowBundle</code>.
 	 * 
 	 * @param bundleFile
 	 *            the file containing the workflow bundle
 	 * @param mediaType
-	 *            the media type of the workflow bundle. A <code>WorkflowBundleReader</code> must
-	 *            exist for this media type.
-	 *            If <code>null</code>, the media type will be guessed as with {@link #guessMediaTypeForSignature(byte[])}.
+	 *            the media type of the workflow bundle. A
+	 *            <code>WorkflowBundleReader</code> must exist for this media
+	 *            type. If <code>null</code>, the media type will be guessed as
+	 *            with {@link #guessMediaTypeForSignature(byte[])}.
 	 * @return the <code>WorkflowBundle</code> read from the file
 	 * @throws ReaderException
 	 *             if there is an error parsing the workflow bundle
 	 * @throws IOException
 	 *             if there is an error reading the file
 	 * @throws IllegalArgumentException
-	 *             if a <code>WorkflowBundleReader</code> cannot be found for the media type
+	 *             if a <code>WorkflowBundleReader</code> cannot be found for
+	 *             the media type
 	 */
-	public WorkflowBundle readBundle(File bundleFile, String mediaType) throws ReaderException,
-	IOException {
+	public WorkflowBundle readBundle(File bundleFile, String mediaType)
+			throws ReaderException, IOException {
 		if (mediaType == null) {
 			byte[] firstBytes = new byte[1024];
 			new FileInputStream(bundleFile).read(firstBytes);
@@ -196,39 +240,43 @@ public class WorkflowBundleIO {
 		WorkflowBundleReader reader = getReaderForMediaType(mediaType);
 		if (reader == null) {
 			if (mediaType == null) {
-				throw new IllegalArgumentException("Could not guess media type for " + bundleFile);
+				throw new IllegalArgumentException(
+						"Could not guess media type for " + bundleFile);
 			}
-			throw new IllegalArgumentException("Could not find reader for media type " + mediaType);
+			throw new IllegalArgumentException(
+					"Could not find reader for media type " + mediaType);
 		}
 		return reader.readBundle(bundleFile, mediaType);
 	}
 
 	/**
-	 * Reads a stream containing a workflow bundle in the specified media type and returns a
-	 * <code>WorkflowBundle</code>.
+	 * Reads a stream containing a workflow bundle in the specified media type
+	 * and returns a <code>WorkflowBundle</code>.
 	 * 
 	 * @param inputStream
 	 *            the stream containing the workflow bundle
 	 * @param mediaType
-	 *            the media type of the workflow bundle. A <code>WorkflowBundleReader</code> must
-	 *            exist for this media type.
-	 *            If <code>null</code>, the media type will be guessed as with {@link #guessMediaTypeForSignature(byte[])}.
+	 *            the media type of the workflow bundle. A
+	 *            <code>WorkflowBundleReader</code> must exist for this media
+	 *            type. If <code>null</code>, the media type will be guessed as
+	 *            with {@link #guessMediaTypeForSignature(byte[])}.
 	 * @return the <code>WorkflowBundle</code> read from the stream
 	 * @throws ReaderException
 	 *             if there is an error parsing the workflow bundle
 	 * @throws IOException
 	 *             if there is an error reading from the stream
 	 * @throws IllegalArgumentException
-	 *             if a <code>WorkflowBundleReader</code> cannot be found for the media type
+	 *             if a <code>WorkflowBundleReader</code> cannot be found for
+	 *             the media type
 	 */
 	public WorkflowBundle readBundle(InputStream inputStream, String mediaType)
-	throws ReaderException, IOException {
-		
+			throws ReaderException, IOException {
+
 		if (mediaType == null) {
 			byte[] firstBytes = new byte[1024];
 			inputStream = new BufferedInputStream(inputStream);
-			try { 
-				inputStream.mark(firstBytes.length*2);			
+			try {
+				inputStream.mark(firstBytes.length * 2);
 				inputStream.read(firstBytes);
 				mediaType = guessMediaTypeForSignature(firstBytes);
 			} finally {
@@ -239,33 +287,37 @@ public class WorkflowBundleIO {
 		WorkflowBundleReader reader = getReaderForMediaType(mediaType);
 		if (reader == null) {
 			if (mediaType == null) {
-				throw new IllegalArgumentException("Could not guess media type for input stream");
+				throw new IllegalArgumentException(
+						"Could not guess media type for input stream");
 			}
-			throw new IllegalArgumentException("Could not find reader for media type " + mediaType);
+			throw new IllegalArgumentException(
+					"Could not find reader for media type " + mediaType);
 		}
 		return reader.readBundle(inputStream, mediaType);
 	}
 
 	/**
-	 * Reads a URL containing a workflow bundle in the specified media type and returns a
-	 * <code>WorkflowBundle</code>.
+	 * Reads a URL containing a workflow bundle in the specified media type and
+	 * returns a <code>WorkflowBundle</code>.
 	 * 
 	 * @param url
 	 *            the URL containing the workflow bundle
 	 * @param mediaType
-	 *            the media type of the workflow bundle. A <code>WorkflowBundleReader</code> must
-	 *            exist for this media type
-	 *            If <code>null</code>, the media type will 
-	 *            be guessed as with {@link #guessMediaTypeForSignature(byte[])}.
+	 *            the media type of the workflow bundle. A
+	 *            <code>WorkflowBundleReader</code> must exist for this media
+	 *            type If <code>null</code>, the media type will be guessed as
+	 *            with {@link #guessMediaTypeForSignature(byte[])}.
 	 * @return the <code>WorkflowBundle</code> read from the URL
 	 * @throws ReaderException
 	 *             if there is an error parsing the workflow bundle
 	 * @throws IOException
 	 *             if there is an error reading from the stream
 	 * @throws IllegalArgumentException
-	 *             if a <code>WorkflowBundleReader</code> cannot be found for the media type
+	 *             if a <code>WorkflowBundleReader</code> cannot be found for
+	 *             the media type
 	 */
-	public WorkflowBundle readBundle(URL url, String mediaType) throws ReaderException, IOException {
+	public WorkflowBundle readBundle(URL url, String mediaType)
+			throws ReaderException, IOException {
 		// TODO: Pass URL to reader
 		// TODO: Use known media type for Accept header
 		// TODO: Extract Content-Type from result
@@ -305,46 +357,53 @@ public class WorkflowBundleIO {
 	 * @param destination
 	 *            the file to write the workflow bundle to
 	 * @param mediaType
-	 *            the media type to write workflow bundle in. A <code>WorkflowBundleWriter</code>
-	 *            must exist for this media type
+	 *            the media type to write workflow bundle in. A
+	 *            <code>WorkflowBundleWriter</code> must exist for this media
+	 *            type
 	 * @throws WriterException
 	 *             if there is an error writing the workflow bundle
 	 * @throws IOException
 	 *             if there is an error writing the file
 	 * @throws IllegalArgumentException
-	 *             if a <code>WorkflowBundleWriter</code> cannot be found for the media type
+	 *             if a <code>WorkflowBundleWriter</code> cannot be found for
+	 *             the media type
 	 */
-	public void writeBundle(WorkflowBundle wfBundle, File destination, String mediaType)
-	throws WriterException, IOException {
+	public void writeBundle(WorkflowBundle wfBundle, File destination,
+			String mediaType) throws WriterException, IOException {
 		WorkflowBundleWriter writer = getWriterForMediaType(mediaType);
 		if (writer == null) {
-			throw new IllegalArgumentException("Could not find writer for media type " + mediaType);
+			throw new IllegalArgumentException(
+					"Could not find writer for media type " + mediaType);
 		}
 		writer.writeBundle(wfBundle, destination, mediaType);
 	}
 
 	/**
-	 * Writes a <code>WorkflowBundle</code> to a stream with specified media type.
+	 * Writes a <code>WorkflowBundle</code> to a stream with specified media
+	 * type.
 	 * 
 	 * @param wfBundle
 	 *            the workflow bundle to write
 	 * @param output
 	 *            the stream to write the workflow bundle to
 	 * @param mediaType
-	 *            the media type to write workflow bundle in. A <code>WorkflowBundleWriter</code>
-	 *            must exist for this media type
+	 *            the media type to write workflow bundle in. A
+	 *            <code>WorkflowBundleWriter</code> must exist for this media
+	 *            type
 	 * @throws WriterException
 	 *             if there is an error writing the workflow bundle
 	 * @throws IOException
 	 *             if there is an error writing to the stream
 	 * @throws IllegalArgumentException
-	 *             if a <code>WorkflowBundleWriter</code> cannot be found for the media type
+	 *             if a <code>WorkflowBundleWriter</code> cannot be found for
+	 *             the media type
 	 */
-	public void writeBundle(WorkflowBundle wfBundle, OutputStream output, String mediaType)
-	throws WriterException, IOException {
+	public void writeBundle(WorkflowBundle wfBundle, OutputStream output,
+			String mediaType) throws WriterException, IOException {
 		WorkflowBundleWriter writer = getWriterForMediaType(mediaType);
 		if (writer == null) {
-			throw new IllegalArgumentException("Could not find writer for media type " + mediaType);
+			throw new IllegalArgumentException(
+					"Could not find writer for media type " + mediaType);
 		}
 		writer.writeBundle(wfBundle, output, mediaType);
 
