@@ -14,7 +14,10 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 
+import uk.org.taverna.scufl2.api.common.Named;
 import uk.org.taverna.scufl2.api.container.WorkflowBundle;
+import uk.org.taverna.scufl2.api.core.Workflow;
+import uk.org.taverna.scufl2.api.profiles.Profile;
 
 /**
  * Utility class for reading and writing <code>WorkflowBundle</code>s.
@@ -49,6 +52,28 @@ public class WorkflowBundleIO {
 		}
 		return allReaders;
 	}
+
+	/**
+	 * Create a new WorkflowBundle with an empty main workflow and an empty main
+	 * profile.
+	 * <p>
+	 * This method is provided mainly for consistency with
+	 * <code>readBundle</code> and <code>writeBundle</code> and does not specify
+	 * a meaningful {@link Named#setName(String)} on the bundle, workflow or
+	 * profile.
+	 * 
+	 */
+	public WorkflowBundle createBundle() {
+		WorkflowBundle bundle = new WorkflowBundle();
+
+		bundle.setMainWorkflow(new Workflow());
+		bundle.getMainWorkflow().setParent(bundle);
+		
+		bundle.setMainProfile(new Profile());
+		bundle.getMainProfile().setParent(bundle);		
+		return bundle;
+	}
+
 	protected List<WorkflowBundleWriter> discoverWriters() {
 		synchronized (this) {
 			if (writersLoader == null) {
