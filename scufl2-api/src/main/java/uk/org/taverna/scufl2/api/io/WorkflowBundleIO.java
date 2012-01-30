@@ -184,8 +184,8 @@ public class WorkflowBundleIO {
 	 */
 	public Set<String> getWriterMediaTypes() {
 		LinkedHashSet<String> types = new LinkedHashSet<String>();
-		for (WorkflowBundleReader reader : getReaders()) {
-			types.addAll(reader.getMediaTypes());
+		for (WorkflowBundleWriter writer : getWriters()) {
+			types.addAll(writer.getMediaTypes());
 		}
 		return types;
 	}
